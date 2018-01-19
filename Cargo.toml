@@ -1,0 +1,10 @@
+[package]
+name = "rusty_controller"
+version = "0.1.0"
+authors = ["Joseph Murphy <air.jmurph@gmail.com>"]
+
+[dependencies]
+ws281x = "0.1.0"
+serde = "1.0.27"
+serde_json = "1.0.9"
+serde_derive = "1.0.27"
