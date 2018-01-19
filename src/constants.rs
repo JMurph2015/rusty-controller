@@ -10,7 +10,7 @@ pub const LED_RSHIFT: u8 = 0 as u8;
 pub const LED_GSHIFT: u8 = 0 as u8;
 pub const LED_BSHIFT: u8 = 0 as u8;
 
-pub const CONTROLLER_NAME: String = "Test Controller".to_string();
+pub const CONTROLLER_NAME: &str = "Test Controller";
 pub const MAIN_PORT: u32 = 37000 as u32;
 pub const SETUP_PORT: u32 = 37001 as u32;
 pub const LED_PER_ROW: i64 = 30 as i64;

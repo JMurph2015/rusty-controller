@@ -6,6 +6,8 @@ extern crate serde_derive;
 
 extern crate ws281x;
 
+use ws281x::Handle;
+
 use serde_json::from_slice;
 
 mod constants;
@@ -36,47 +38,46 @@ fn main() {
 	let mut master_buf = [0x0; UDP_MAX_PACKET_SIZE as usize];
 
 	
-	let main_udpsock = UdpSocket::bind(format!("127.0.0.1:{}", MAIN_PORT))
+	let mut main_udpsock = UdpSocket::bind(format!("127.0.0.1:{}", MAIN_PORT))
 		.expect("Failed to connect to the socket");
 
 	setup_server_connection(
-		CONTROLLER_NAME, 
+		CONTROLLER_NAME.to_string(), 
 		LED_PER_ROW, 
 		NUM_ROW, 
 		&mut main_udpsock, 
 		MAIN_PORT, 
-		SETUP_PORT, 
-		&mut master_buf
+		SETUP_PORT
 	);
 
-	let mut check = 0;
-
-	loop {
-		for (i, led) in handler.channel_mut(0).leds_mut().iter_mut().enumerate() {
-			if i % 2 == check {
-				*led = 0
-			}
-			else {
-				*led = 0xffffff;
-			}
+	for i in 0..10 {
+		if i % 1 == 0 {
+			set_all_rgb(&mut handler, 0xff, 0x00, 0x00);
+		} else {
+			set_all_rgb(&mut handler, 0x00, 0xff, 0x00);
 		}
-
-		handler.render().unwrap();
-		handler.wait().unwrap();
-
-		thread::sleep(Duration::from_millis(500));
-		check = if check == 0 { 1 } else { 0 };
+		thread::sleep(Duration::from_millis(250));
+	}
+	set_all_rgb(&mut handler, 0x00, 0x00, 0x00);
+	loop {
+		let received = match main_udpsock.recv(&mut master_buf) {
+			Ok( received ) => received,
+			Err( e ) => 1usize
+		};
+		if received != 1usize {
+			parse_and_update(&mut handler, &master_buf);
+		}
     }
 	
 }
 
-fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_udpsock: &mut UdpSocket, main_port: u32, setup_port: u32, buf: &mut [u8]) {
+fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_udpsock: &UdpSocket, main_port: u32, setup_port: u32) {
 	let output = Command::new("hostname")
 		.arg("-I")
 		.output()
 		.expect("Failed to execute hostname command.");
-	let data_string: &[str] = String::from_utf8_lossy( &output.stdout ).split_whitespace().collect();
-	let ip_string: String = data_string[0] as String;
+	let ip_string = String::from_utf8_lossy( &output.stdout ).split_whitespace().next()
+		.expect("Sad times since there were no IP's listed.").to_string();
 
 
 	let controller_config = ControllerConfig {
@@ -96,7 +97,10 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 		]
 	};
 
-	main_udpsock.set_read_timeout(Option::Some(Duration::from_secs(60)));
+	main_udpsock.set_read_timeout(Option::Some(Duration::from_secs(60)))
+		.expect("Failed to set timeout.");
+
+	let mut buf = [0x0; UDP_MAX_PACKET_SIZE as usize];
 
 	let received = match main_udpsock.recv(&mut buf) {
 		Ok( received ) => received,
@@ -104,13 +108,30 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 	};
 	
 	if received != 1usize {
-		let data: StartupMessage = serde_json::from_slice(&buf[0..received]).unwrap()
-			.expect("Failed to parse json.");
+		let data = &buf[0..received];
+		let json_data: StartupMessage = serde_json::from_slice(data)
+			.expect("Failed to parse JSON.");
 		// TODO Error handling on the json decoding path
-		let output = serde_json::to_vec(controller_config);
+		let output = serde_json::to_vec(&controller_config)
+			.expect("Failed to render JSON");
 
-		main_udpsock.send_to(output, format!("{}:{}", data.ip, setup_port))
+		main_udpsock.send_to(&output, format!("{}:{}", json_data.ip, setup_port))
 			.expect("Couldn't send data to address");
 	}
 }
 
+fn parse_and_update( ledstrip: &mut Handle, raw_data: &[u8] ) {
+	for (i, led) in ledstrip.channel_mut(0).leds_mut().iter_mut().enumerate() {
+		if i >= 2 {
+			*led = (raw_data[(3*i)-2] as u32) << 16 + (raw_data[(3*i) - 1] as u32) << 8 + (raw_data[3*i] as u32);
+		}
+	}
+}
+
+fn set_all_rgb( ledstrip: &mut Handle, r: u8, g: u8, b: u8) {
+	for (i, led) in ledstrip.channel_mut(0).leds_mut().iter_mut().enumerate() {
+		*led = ( r as u32 ) << 16 + ( g as u32 ) << 8 + (b as u32);
+	}
+	ledstrip.render().unwrap();
+	ledstrip.wait().unwrap();
+}

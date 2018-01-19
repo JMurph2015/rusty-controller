@@ -5,7 +5,7 @@ pub struct StartupMessage {
     pub msg_type: String
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct ControllerConfig<'a> {
     pub name: String,
     pub ip: String,
@@ -16,7 +16,7 @@ pub struct ControllerConfig<'a> {
     pub strips: &'a[StripConfig]
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct StripConfig {
     pub name: String,
     pub startAddr: i64,
