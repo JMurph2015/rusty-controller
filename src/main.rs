@@ -126,6 +126,8 @@ fn parse_and_update( ledstrip: &mut Handle, raw_data: &[u8] ) {
 			*led = (raw_data[(3*i)-2] as u32) << 16 + (raw_data[(3*i) - 1] as u32) << 8 + (raw_data[3*i] as u32);
 		}
 	}
+	ledstrip.render().unwrap();
+	ledstrip.wait().unwrap();
 }
 
 fn set_all_rgb( ledstrip: &mut Handle, r: u8, g: u8, b: u8) {
