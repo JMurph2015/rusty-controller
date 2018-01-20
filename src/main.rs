@@ -35,25 +35,6 @@ fn main() {
 			.brightness(LED_BRIGHTNESS as i32)
 			.build().unwrap())
 		.build().unwrap();
-	
-	let mut check = 0;
-
-	loop {
-		for (i, led) in handler.channel_mut(0).leds_mut().iter_mut().enumerate() {
-			if i % 2 == check {
-				*led = 0
-			}
-			else {
-				*led = 0xffffff;
-			}
-		}
-
-		handler.render().unwrap();
-		handler.wait().unwrap();
-
-		thread::sleep(Duration::from_millis(500));
-		check = if check == 0 { 1 } else { 0 };
-	}
 
 	println!("Initialized the LED handler.");
 
@@ -67,9 +48,13 @@ fn main() {
 
 	for i in 0..10 {
 		if i % 1 == 0 {
+			println!("Setting RGB's to red.");
 			set_all_rgb(&mut handler, 0xff, 0x00, 0x00);
+			println!("Set RGB's to red");
 		} else {
+			println!("Setting RGB's to green");
 			set_all_rgb(&mut handler, 0x00, 0xff, 0x00);
+			println!("Set RGB's to green");
 		}
 		thread::sleep(Duration::from_millis(250));
 	}
