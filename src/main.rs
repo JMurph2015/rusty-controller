@@ -142,7 +142,8 @@ fn parse_and_update( ledstrip: &mut Handle, raw_data: &[u8] ) {
 
 fn set_all_rgb( ledstrip: &mut Handle, r: u8, g: u8, b: u8) {
 	for (i, led) in ledstrip.channel_mut(0).leds_mut().iter_mut().enumerate() {
-		let color: u32 = ( r as u32 ) << 8 + ( g as u32 ) << 0 + (b as u32);
+		let color: u32 = r*2^16 + g*2^8 + b;
+		//let color: u32 = ( r as u32 ) << 24 + ( g as u32 ) << 16 + (b as u32) << 8;
 		println!("{}", color);
 		*led = color;
 	}
