@@ -133,7 +133,7 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 fn parse_and_update( ledstrip: &mut Handle, raw_data: &[u8] ) {
 	for (i, led) in ledstrip.channel_mut(0).leds_mut().iter_mut().enumerate() {
 		if i >= 2 {
-			*led = (raw_data[(3*i)-2] as u32) << 16 + (raw_data[(3*i) - 1] as u32) << 8 + (raw_data[3*i] as u32);
+			*led = (raw_data[(3*i)-2] as u32)*2_u32.pow(16) + (raw_data[(3*i) - 1] as u32)*2_u32.pow(8) + (raw_data[3*i] as u32);
 		}
 	}
 	ledstrip.render().unwrap();
@@ -142,10 +142,7 @@ fn parse_and_update( ledstrip: &mut Handle, raw_data: &[u8] ) {
 
 fn set_all_rgb( ledstrip: &mut Handle, r: u8, g: u8, b: u8) {
 	for (i, led) in ledstrip.channel_mut(0).leds_mut().iter_mut().enumerate() {
-		let color: u32 = (r as u32)*2_u32.pow(16) + (g as u32)*2_u32.pow(8) + b as u32;
-		//let color: u32 = ( r as u32 ) << 24 + ( g as u32 ) << 16 + (b as u32) << 8;
-		println!("{}", color);
-		*led = color;
+		*led = (r as u32)*2_u32.pow(16) + (g as u32)*2_u32.pow(8) + b as u32;
 	}
 	ledstrip.render().unwrap();
 	ledstrip.wait().unwrap();
