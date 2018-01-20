@@ -49,11 +49,11 @@ fn main() {
 	for i in 0..10 {
 		if i % 1 == 0 {
 			println!("Setting RGB's to red.");
-			set_all_rgb(&mut handler, 0xff, 0x00, 0x00);
+			set_all_rgb(&mut handler, 0xff, 0x02, 0x01);
 			println!("Set RGB's to red");
 		} else {
 			println!("Setting RGB's to green");
-			set_all_rgb(&mut handler, 0x00, 0xff, 0x00);
+			set_all_rgb(&mut handler, 0x01, 0xff, 0x02);
 			println!("Set RGB's to green");
 		}
 		thread::sleep(Duration::from_millis(250));
@@ -142,7 +142,7 @@ fn parse_and_update( ledstrip: &mut Handle, raw_data: &[u8] ) {
 
 fn set_all_rgb( ledstrip: &mut Handle, r: u8, g: u8, b: u8) {
 	for (i, led) in ledstrip.channel_mut(0).leds_mut().iter_mut().enumerate() {
-		let color: u32 = ( r as u32 ) << 16 + ( g as u32 ) << 8 + (b as u32);
+		let color: u32 = ( r as u32 ) << 8 + ( g as u32 ) << 4 + (b as u32);
 		println!("{}", color);
 		*led = color;
 	}
