@@ -41,15 +41,6 @@ fn main() {
 	let mut main_udpsock = UdpSocket::bind(format!("127.0.0.1:{}", MAIN_PORT))
 		.expect("Failed to connect to the socket");
 
-	setup_server_connection(
-		CONTROLLER_NAME.to_string(), 
-		LED_PER_ROW, 
-		NUM_ROW, 
-		&mut main_udpsock, 
-		MAIN_PORT, 
-		SETUP_PORT
-	);
-
 	for i in 0..10 {
 		if i % 1 == 0 {
 			set_all_rgb(&mut handler, 0xff, 0x00, 0x00);
@@ -59,6 +50,16 @@ fn main() {
 		thread::sleep(Duration::from_millis(250));
 	}
 	set_all_rgb(&mut handler, 0x00, 0x00, 0x00);
+
+	setup_server_connection(
+		CONTROLLER_NAME.to_string(), 
+		LED_PER_ROW, 
+		NUM_ROW, 
+		&mut main_udpsock, 
+		MAIN_PORT, 
+		SETUP_PORT
+	);
+
 	loop {
 		let received = match main_udpsock.recv(&mut master_buf) {
 			Ok( received ) => received,
