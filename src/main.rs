@@ -115,15 +115,17 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 
 	println!("Starting to listen for data.");
 
+	let default_data = ( 0usize, SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080) );
+
 	let (received, src_addr) = match main_udpsock.recv_from(&mut buf) {
 		Ok( received ) => received,
-		Err( e ) => ( 1usize, SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080) ),
+		Err( e ) => default_data,
 	};
 
 	println!("Received some sort of data");
 	
-	if received != 1usize {
-		let data = &buf[0..received];
+	if received != 0usize {
+		let data = buf[..received];
 		let json_data: StartupMessage = serde_json::from_slice(data)
 			.expect("Failed to parse JSON.");
 		println!("Found startup message");
