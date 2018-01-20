@@ -119,7 +119,10 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 
 	let (received, src_addr) = match main_udpsock.recv_from(&mut buf) {
 		Ok( received ) => received,
-		Err( e ) => default_data,
+		Err( e ) => {
+			println!("{}",e);
+			default_data
+			},
 	};
 
 	println!("Received some sort of data");
