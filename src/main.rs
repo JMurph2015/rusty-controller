@@ -26,6 +26,7 @@ use std::string::String;
 use std::option::Option;
 
 fn main() {
+	println!("Starting rusty_controller...");
     let mut handler = ws281x::handle::new()
 		.dma(LED_DMA)
 		.channel(0, ws281x::channel::new()
@@ -34,12 +35,16 @@ fn main() {
 			.brightness(LED_BRIGHTNESS as i32)
 			.build().unwrap())
 		.build().unwrap();
+	
+	println!("Initialized the LED handler.");
 
 	let mut master_buf = [0x0; UDP_MAX_PACKET_SIZE as usize];
 
 	
 	let mut main_udpsock = UdpSocket::bind(format!("127.0.0.1:{}", MAIN_PORT))
 		.expect("Failed to connect to the socket");
+
+	println!("Initialized the main UDP socket.");
 
 	for i in 0..10 {
 		if i % 1 == 0 {
