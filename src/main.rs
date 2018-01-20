@@ -48,13 +48,9 @@ fn main() {
 
 	for i in 0..10 {
 		if i % 2 == 0 {
-			println!("Setting RGB's to red.");
 			set_all_rgb(&mut handler, 0xff, 0x02, 0x01);
-			println!("Set RGB's to red");
 		} else {
-			println!("Setting RGB's to green");
 			set_all_rgb(&mut handler, 0x01, 0xff, 0x02);
-			println!("Set RGB's to green");
 		}
 		thread::sleep(Duration::from_millis(250));
 	}
@@ -89,6 +85,7 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 	let ip_string = String::from_utf8_lossy( &output.stdout ).split_whitespace().next()
 		.expect("Sad times since there were no IP's listed.").to_string();
 
+	println!("IP Address: {}", ip_string);
 
 	let controller_config = ControllerConfig {
 		name: name,
@@ -107,6 +104,8 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 		]
 	};
 
+	println!("constructed controller config");
+
 	main_udpsock.set_read_timeout(Option::Some(Duration::from_secs(60)))
 		.expect("Failed to set timeout.");
 
@@ -121,6 +120,7 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 		let data = &buf[0..received];
 		let json_data: StartupMessage = serde_json::from_slice(data)
 			.expect("Failed to parse JSON.");
+		println!("Found startup message");
 		// TODO Error handling on the json decoding path
 		let output = serde_json::to_vec(&controller_config)
 			.expect("Failed to render JSON");
