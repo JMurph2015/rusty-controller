@@ -47,7 +47,7 @@ fn main() {
 	println!("Initialized the main UDP socket.");
 
 	for i in 0..10 {
-		if i % 1 == 0 {
+		if i % 2 == 0 {
 			println!("Setting RGB's to red.");
 			set_all_rgb(&mut handler, 0xff, 0x02, 0x01);
 			println!("Set RGB's to red");
@@ -142,7 +142,7 @@ fn parse_and_update( ledstrip: &mut Handle, raw_data: &[u8] ) {
 
 fn set_all_rgb( ledstrip: &mut Handle, r: u8, g: u8, b: u8) {
 	for (i, led) in ledstrip.channel_mut(0).leds_mut().iter_mut().enumerate() {
-		let color: u32 = ( r as u32 ) << 8 + ( g as u32 ) << 4 + (b as u32);
+		let color: u32 = ( r as u32 ) << 8 + ( g as u32 ) << 0 + (b as u32);
 		println!("{}", color);
 		*led = color;
 	}
