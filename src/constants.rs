@@ -11,8 +11,8 @@ pub const LED_GSHIFT: u8 = 0 as u8;
 pub const LED_BSHIFT: u8 = 0 as u8;
 
 pub const CONTROLLER_NAME: &str = "Test Controller";
-pub const MAIN_PORT: u32 = 37000 as u32;
-pub const SETUP_PORT: u32 = 37001 as u32;
+pub const MAIN_PORT: u32 = 8080 as u32;
+pub const SETUP_PORT: u32 = 37322 as u32;
 pub const LED_PER_ROW: i64 = 30 as i64;
 pub const NUM_ROW: i64 = 1 as i64;
 pub const BYTES_PER_LED: i64 = 3 as i64;
