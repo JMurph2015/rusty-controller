@@ -125,7 +125,7 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 	println!("Received some sort of data");
 	
 	if received != 0usize {
-		let data = buf[..received];
+		let data = &buf[..received];
 		let json_data: StartupMessage = serde_json::from_slice(data)
 			.expect("Failed to parse JSON.");
 		println!("Found startup message");
