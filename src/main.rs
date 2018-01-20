@@ -111,7 +111,7 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 
 	let mut buf = [0x0; UDP_MAX_PACKET_SIZE as usize];
 
-	let received = match main_udpsock.recv(&mut buf) {
+	let received = match main_udpsock.recv_from(&mut buf) {
 		Ok( received ) => received,
 		Err( e ) => 1usize,
 	};
