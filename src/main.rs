@@ -115,6 +115,8 @@ fn setup_server_connection(name: String, led_per_row: i64, num_rows: i64, main_u
 		Ok( received ) => received,
 		Err( e ) => 1usize,
 	};
+
+	println!("Received some sort of data");
 	
 	if received != 1usize {
 		let data = &buf[0..received];
