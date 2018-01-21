@@ -4,7 +4,20 @@ version = "0.1.0"
 authors = ["Joseph Murphy <air.jmurph@gmail.com>"]
 
 [dependencies]
-ws281x = "0.1.0"
+rs_ws281x = "0.1.0"
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
+mio = "0.6"
+
+[profile.release]
+opt-level = 3
+debug = true
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'unwind'
+
+[build]
+target = "armv7-unknown-linux-gnueabihf"
