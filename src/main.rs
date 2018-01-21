@@ -5,6 +5,11 @@ extern crate serde_derive;
 
 extern crate mio;
 
+extern crate ctrlc;
+use ctrlc::*;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
 extern crate rs_ws281x;
 use rs_ws281x::*;
 
@@ -29,6 +34,11 @@ use std::ptr::{null, null_mut};
 
 fn main() {
 	println!("Starting rusty_controller...");
+	let running = Arc::new(AtomicBool::new(true));
+	let r = running.clone();
+	ctrlc::set_handler(move || {
+		r.store(false, Ordering::SeqCst);
+	}).expect("Error setting Ctrl-C handler");
 	let mut ret: ws2811_return_t;
 	let mut ledstring = ws2811_t {
 		render_wait_time: 0,
@@ -79,17 +89,17 @@ fn main() {
 
 	const MAIN_SOCKET: Token = Token(0);	
 	let addr = Ipv4Addr::new(0, 0, 0, 0);
-    let bind_addr = SocketAddr::from((addr, MAIN_PORT));
-    let main_socket = UdpSocket::bind(&bind_addr)
-        .expect("Failed to bind socket");
-    main_socket.set_broadcast(true)
-        .expect("Failed to set broadcast");
+	let bind_addr = SocketAddr::from((addr, MAIN_PORT));
+	let main_socket = UdpSocket::bind(&bind_addr)
+		.expect("Failed to bind socket");
+	main_socket.set_broadcast(true)
+		.expect("Failed to set broadcast");
 
-    let poll = Poll::new().expect("Failed to make poll");
-    poll.register(&main_socket, MAIN_SOCKET, Ready::readable(), PollOpt::edge())
-        .expect("Failed to register socket");
+	let poll = Poll::new().expect("Failed to make poll");
+	poll.register(&main_socket, MAIN_SOCKET, Ready::readable(), PollOpt::edge())
+		.expect("Failed to register socket");
 
-    let mut events = Events::with_capacity(128);
+	let mut events = Events::with_capacity(128);
 	
 
 	println!("Initialized the main UDP socket.");
@@ -127,12 +137,15 @@ fn main() {
 	let default_data = ( 0usize, SocketAddr::from(([127,0,0,1], 8080)));
 
 	let mut elapsed: Duration = Duration::from_millis(0);
-	let timeout: Duration = Duration::from_secs(15);
+	let timeout: Duration = Duration::from_secs(30);
 	let reset_duration = Duration::from_millis(0);
 	let poll_rate = Duration::from_millis(1);
 	let polling_rate = Some(poll_rate);
 
-	'outer: loop {
+	'main_loop: loop {
+		if !running.load(Ordering::SeqCst){
+			break 'main_loop;
+		}
 		poll.poll( &mut events, polling_rate )
 			.expect("Failed to poll");
 		for event in events.iter() {
@@ -151,7 +164,7 @@ fn main() {
 							ret = ws2811_render(ledstring_ptr);
 							if ret != ws2811_return_t::WS2811_SUCCESS {
 								println!("ws2811_render failed: {:?}", ws2811_get_return_t_str(ret));
-								break 'outer;
+								break 'main_loop;
 							}
 							ws2811_wait(ledstring_ptr);
 						}
@@ -178,14 +191,12 @@ fn main() {
 			);
 			elapsed = reset_duration;
 		}
-    }
-
+	}
 	set_all_rgb(ledstring, 0o0, 0o0, 0o0);
 	unsafe {
 		ws2811_render(ledstring_ptr);
 		ws2811_fini(ledstring_ptr);
-	}	
-	
+	}
 }
 
 fn setup_server_connection( 
@@ -286,5 +297,5 @@ fn set_all_rgb( ledstrip: ws2811_t, r: u8, g: u8, b: u8) {
 }
 
 fn compose_color( r: u8, g: u8, b: u8) -> u32 {
-	return 0xFF000000 as u32 + (g as u32)*2_u32.pow(16) + (r as u32)*2_u32.pow(8) + b as u32;
+	return 0xFF000000 as u32 + (r as u32)*2_u32.pow(16) + (g as u32)*2_u32.pow(8) + b as u32;
 }
