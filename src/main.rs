@@ -4,6 +4,8 @@ extern crate serde_json;
 extern crate serde_derive;
 
 extern crate mio;
+use mio::net::UdpSocket;
+use mio::{Events, Ready, Poll, PollOpt, Token};
 
 extern crate ctrlc;
 use ctrlc::*;
@@ -17,18 +19,13 @@ mod constants;
 use constants::*;
 
 mod handle_json;
-use handle_json::StartupMessage;
-use handle_json::ControllerConfig;
-use handle_json::StripConfig;
-
-use mio::net::UdpSocket;
-use mio::{Events, Ready, Poll, PollOpt, Token};
+use handle_json::{StartupMessage, ControllerConfig, StripConfig};
 
 use std::net::{SocketAddr, Ipv4Addr, ToSocketAddrs};
 
 use std::thread;
-use std::time::Duration;
 use std::process::Command;
+use std::time::Duration;
 use std::string::String;
 use std::ptr::{null, null_mut};
 
@@ -112,14 +109,12 @@ fn main() {
 		}
 		unsafe {
 			ws2811_render(ledstring_ptr);
-			ws2811_wait(ledstring_ptr);
 		}
 		thread::sleep(Duration::from_millis(250));
 	}
 	set_all_rgb(ledstring, 0x00, 0x00, 0x00);
 	unsafe {
 		ws2811_render(ledstring_ptr);
-		ws2811_wait(ledstring_ptr);
 	}
 	
 
@@ -139,7 +134,7 @@ fn main() {
 	let mut elapsed: Duration = Duration::from_millis(0);
 	let timeout: Duration = Duration::from_secs(30);
 	let reset_duration = Duration::from_millis(0);
-	let poll_rate = Duration::from_millis(1);
+	let poll_rate = Duration::from_millis(5);
 	let polling_rate = Some(poll_rate);
 
 	'main_loop: loop {
@@ -166,7 +161,6 @@ fn main() {
 								println!("ws2811_render failed: {:?}", ws2811_get_return_t_str(ret));
 								break 'main_loop;
 							}
-							ws2811_wait(ledstring_ptr);
 						}
 					}
 				},
