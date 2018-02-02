@@ -294,7 +294,7 @@ fn set_all_rgb( ledstrip: ws2811_t, r: u8, g: u8, b: u8) {
 fn compose_color( r: u8, g: u8, b: u8) -> u32 {
 	return 0xFF000000 as u32 + (r as u32)*2_u32.pow(16) + (g as u32)*2_u32.pow(8) + b as u32;
 }
-
+/*
 fn process_config_packet( packet: &[u8] ) -> Result<StartupMessage, Error> {
 
 	return Result(StartupMessage::new())
@@ -303,3 +303,4 @@ fn process_config_packet( packet: &[u8] ) -> Result<StartupMessage, Error> {
 fn send_config_packet( socket: &UdpSocket, src_addr: SocketAddr, setup_port: u16) {
 
 }
+*/
