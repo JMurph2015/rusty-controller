@@ -58,7 +58,7 @@ fn main() {
 				bshift: 0o0,
 			},
 			ws2811_channel_t {
-				gpionum: 0,
+				gpionum: LED_PIN,
 				count: 0,
 				invert: LED_INVERT,
 				brightness: 0,
@@ -202,6 +202,7 @@ fn setup_server_connection(
 	main_port: u16, 
 	setup_port: u16
 	) {
+	// ifconfig | grep -i "inet " | sed -r 's/.*addr:([^ ]+).*/\1/' | tr '\n' ' '
 	let output = Command::new("hostname")
 		.arg("-I")
 		.output()

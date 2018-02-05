@@ -1,5 +1,5 @@
 pub const LED_COUNT: i32 = 30 as i32;     // Number of LED pixels.
-pub const LED_PIN: i32 = 21 as i32;      // GPIO pin connected to the pixels (must support PWM!).
+pub const LED_PIN: i32 = 10 as i32;      // GPIO pin connected to the pixels (must support PWM!).
 pub const LED_FREQ_HZ: u32 = 800000 as u32;  // LED signal frequency in hertz (usually 800khz)
 pub const LED_DMA: i32 = 10 as i32;       // DMA channel to use for generating signal (try 5)
 pub const LED_BRIGHTNESS: u8 = 255 as u8;     // Set to 0 for darkest and 255 for brightest
