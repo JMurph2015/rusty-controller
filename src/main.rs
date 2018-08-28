@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 extern crate serde;
 extern crate serde_json;
 #[macro_use]
@@ -8,127 +9,86 @@ use mio::net::UdpSocket;
 use mio::{Events, Ready, Poll, PollOpt, Token};
 
 extern crate ctrlc;
-use ctrlc::*;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 extern crate rs_ws281x;
-use rs_ws281x::*;
-
-mod constants;
-use constants::*;
+use rs_ws281x::{RawColor};
 
 mod handle_json;
-use handle_json::{StartupMessage, ControllerConfig, StripConfig};
+use handle_json::{StartupMessage, ConfigPacket, StripConfigPacket};
 
-use std::net::{SocketAddr, Ipv4Addr, ToSocketAddrs};
+mod config;
+use config::{ControllerConfig, create_handler};
 
-use std::thread;
-use std::process::Command;
-use std::time::Duration;
-use std::string::String;
-use std::ptr::{null, null_mut};
+use std::{
+	thread,
+	fs,
+	process::{Command},
+	time::{Duration},
+	net::{SocketAddr, Ipv4Addr}
+};
+
+pub const UDP_MAX_PACKET_SIZE: u32 = 65507 as u32;
 
 fn main() {
-	println!("Starting rusty_controller...");
-	let running = Arc::new(AtomicBool::new(true));
-	let r = running.clone();
-	ctrlc::set_handler(move || {
-		r.store(false, Ordering::SeqCst);
-	}).expect("Error setting Ctrl-C handler");
-	let mut ret: ws2811_return_t;
-	let mut ledstring = ws2811_t {
-		render_wait_time: 0,
-		device: null_mut(),
-		rpi_hw: null(),
-		freq: LED_FREQ_HZ,
-		dmanum: LED_DMA,
-		channel: [
-			ws2811_channel_t {
-				gpionum: LED_PIN,
-				count: LED_COUNT,
-				invert: LED_INVERT,
-				brightness: LED_BRIGHTNESS,
-				strip_type: WS2811_STRIP_GRB as i32,
-				leds: null_mut(),
-				gamma: null_mut(),
-				wshift: 0o0,
-				rshift: 0o0,
-				gshift: 0o0,
-				bshift: 0o0,
-			},
-			ws2811_channel_t {
-				gpionum: LED_PIN,
-				count: 0,
-				invert: LED_INVERT,
-				brightness: 0,
-				strip_type: WS2811_STRIP_GRB as i32,
-				leds: null_mut(),
-				gamma: null_mut(),
-				wshift: 0o0,
-				rshift: 0o0,
-				gshift: 0o0,
-				bshift: 0o0,
-			}
-		]
-	};
-	let mut ledstring_ptr: *mut ws2811_t = &mut ledstring;
-	unsafe {
-		ret = ws2811_init(ledstring_ptr);
-		if ret != ws2811_return_t::WS2811_SUCCESS {
-			println!("ws2811_init failed: {:?}\n", ws2811_get_return_t_str(ret));
-			panic!("Init failed");
-		}
-	}
-	
+    println!("Starting rusty_controller...");
 
-	println!("Initialized the LED handler.");
+	let config: ControllerConfig = serde_json::from_str(
+		&fs::read_to_string("/led_config.json")
+			.expect("Failed to read config file")
+	).expect("Failed to deserialize config.");
 
-	const MAIN_SOCKET: Token = Token(0);	
-	let addr = Ipv4Addr::new(0, 0, 0, 0);
-	let bind_addr = SocketAddr::from((addr, MAIN_PORT));
-	let main_socket = UdpSocket::bind(&bind_addr)
-		.expect("Failed to bind socket");
-	main_socket.set_broadcast(true)
-		.expect("Failed to set broadcast");
+    // Set up a handler for Ctrl-C events
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+    ctrlc::set_handler(move || {
+        r.store(false, Ordering::SeqCst);
+    }).expect("Error setting Ctrl-C handler");
 
-	let poll = Poll::new().expect("Failed to make poll");
-	poll.register(&main_socket, MAIN_SOCKET, Ready::readable(), PollOpt::edge())
-		.expect("Failed to register socket");
+    // Initialize the Handler
+	let mut led_handler = create_handler(config.clone());
 
-	let mut events = Events::with_capacity(128);
-	
+    // Initialize variables for server connection
+    const MAIN_SOCKET: Token = Token(0);
+    let addr = Ipv4Addr::new(0, 0, 0, 0);
+    let bind_addr = SocketAddr::from((addr, config.port));
+    let main_socket = UdpSocket::bind(&bind_addr)
+        .expect("Failed to bind socket");
+    main_socket.set_broadcast(true)
+        .expect("Failed to set broadcast");
+    
+    // Set up poll struct
+    let poll = Poll::new().expect("Failed to make poll");
+    poll.register(&main_socket, MAIN_SOCKET, Ready::readable(), PollOpt::edge())
+        .expect("Failed to register socket");
 
-	println!("Initialized the main UDP socket.");
+    // Set up event queue
+    let mut events = Events::with_capacity(128);
 
-	for i in 0..4 {
-		if i % 2 == 0 {
-			set_all_rgb(ledstring, 0x55, 0x02, 0x01);
-		} else {
-			set_all_rgb(ledstring, 0x01, 0x55, 0x02);
-		}
-		unsafe {
-			ws2811_render(ledstring_ptr);
-		}
-		thread::sleep(Duration::from_millis(250));
-	}
-	set_all_rgb(ledstring, 0x00, 0x00, 0x00);
-	unsafe {
-		ws2811_render(ledstring_ptr);
-	}
-	
+    println!("Initialized the main UDP socket.");
 
-	setup_server_connection(
-		&poll,
-		&main_socket,
-		CONTROLLER_NAME.to_string(), 
-		LED_PER_ROW, 
-		NUM_ROW,  
-		MAIN_PORT, 
-		SETUP_PORT
-	);
+    for i in 0..4 {
+        if i % 2 == 0 {
+            set_all_rgb(led_handler.leds_mut(0), 0x55, 0x02, 0x01);
+        } else {
+            set_all_rgb(led_handler.leds_mut(1), 0x01, 0x55, 0x02);
+        }
+        led_handler.render().expect("Failed to render");
+        thread::sleep(Duration::from_millis(250));
+    }
+    set_all_rgb(led_handler.leds_mut(0), 0x00, 0x00, 0x00);
+    led_handler.render().expect("Failed to render");
+    
+    // Setup server connection
+    setup_server_connection(
+        &poll,
+        &main_socket,
+		config.clone()
+    );
 
-	let mut buf = [0x0; UDP_MAX_PACKET_SIZE as usize];
+    // Setup polling variables for LED data
+    let mut buf = [0x0; UDP_MAX_PACKET_SIZE as usize];
 	let default_data = ( 0usize, SocketAddr::from(([127,0,0,1], 8080)));
 
 	let mut elapsed: Duration = Duration::from_millis(0);
@@ -137,7 +97,8 @@ fn main() {
 	let poll_rate = Duration::from_millis(5);
 	let polling_rate = Some(poll_rate);
 
-	'main_loop: loop {
+    // Begin main loop
+    'main_loop: loop {
 		if !running.load(Ordering::SeqCst){
 			break 'main_loop;
 		}
@@ -154,14 +115,8 @@ fn main() {
 						Err( _e ) => default_data,
 					};
 					if received != 0usize {
-						parse_and_update( ledstring, &buf[..received]);
-						unsafe {
-							ret = ws2811_render(ledstring_ptr);
-							if ret != ws2811_return_t::WS2811_SUCCESS {
-								println!("ws2811_render failed: {:?}", ws2811_get_return_t_str(ret));
-								break 'main_loop;
-							}
-						}
+						parse_and_update( &mut led_handler, &buf[..received]);
+                        led_handler.render().expect("Render failed...");
 					}
 				},
 				_ => {
@@ -177,30 +132,19 @@ fn main() {
 			setup_server_connection(
 				&poll,
 				&main_socket,
-				CONTROLLER_NAME.to_string(), 
-				LED_PER_ROW, 
-				NUM_ROW,  
-				MAIN_PORT, 
-				SETUP_PORT
+				config.clone()
 			);
 			elapsed = reset_duration;
 		}
 	}
-	set_all_rgb(ledstring, 0o0, 0o0, 0o0);
-	unsafe {
-		ws2811_render(ledstring_ptr);
-		ws2811_fini(ledstring_ptr);
-	}
+	set_all_rgb(led_handler.leds_mut(0), 0o0, 0o0, 0o0);
+    led_handler.render().expect("Failed to render");
 }
 
 fn setup_server_connection( 
 	poll: &Poll, 
 	main_udpsock: &UdpSocket,
-	name: String, 
-	led_per_row: i64, 
-	num_rows: i64, 
-	main_port: u16, 
-	setup_port: u16
+	config: ControllerConfig
 	) {
 	// ifconfig | grep -i "inet " | sed -r 's/.*addr:([^ ]+).*/\1/' | tr '\n' ' '
 	let output = Command::new("hostname")
@@ -212,21 +156,21 @@ fn setup_server_connection(
 
 	println!("IP Address: {}", ip_string);
 
-	let controller_config = ControllerConfig {
-		name: name,
+	let controller_config = ConfigPacket {
+		name: config.clone().name,
 		ip: ip_string,
-		port: main_port as i64,
-		numStrips: num_rows,
-		numAddrs: led_per_row*num_rows,
+		port: config.port as i64,
+		numStrips: config.clone().strips.len() as i64,
+		numAddrs: config.clone().num_addrs().into(),
 		mac: "none".to_string(),
-		strips: &[
-			StripConfig {
-				name: "1".to_string(),
-				startAddr: 1,
-				endAddr: 30,
-				channel: 1
+		strips: config.strips.iter().map(|x: _| {
+			StripConfigPacket {
+				name: x.name.clone(),
+				startAddr: x.startAddr.clone() as i64,
+				endAddr: x.endAddr.clone() as i64,
+				channel: x.channel.clone() as i64,
 			}
-		]
+		}).collect::<Vec<StripConfigPacket>>()
 	};
 
 	let mut buf = [0x0; UDP_MAX_PACKET_SIZE as usize];
@@ -259,49 +203,40 @@ fn setup_server_connection(
 	if received != 0usize {
 		
 		let data = &buf[..received];
-		let json_data: StartupMessage = serde_json::from_slice(data)
+		let _json_data: StartupMessage = serde_json::from_slice(data)
 			.expect("Failed to parse JSON.");
 		println!("Found startup message");
 		// TODO Error handling on the json decoding path
 		let output = serde_json::to_vec(&controller_config)
 			.expect("Failed to render JSON");
 
-		src_addr.set_port(setup_port);
+		src_addr.set_port(config.setup_port);
 
 		main_udpsock.send_to(&output, &src_addr)
 			.expect("Couldn't send data to address");
 	}
 }
 
-fn parse_and_update( ledstrip: ws2811_t, raw_data: &[u8] ) {
-	unsafe {
-		for i in 0..ledstrip.channel[0].count {
-			if (3*i) < raw_data.len() as i32 {
-				*ledstrip.channel[0].leds.offset(i as isize) = compose_color(raw_data[(3*i) as usize], raw_data[(3*i + 1) as usize], raw_data[(3*i+2) as usize]);
+fn parse_and_update( handler: &mut rs_ws281x::Controller, raw_data: &[u8] ) {
+	let mut offset = 0;
+	for channel_num in handler.channels().iter() {
+		let mut ledstrip = handler.leds_mut(channel_num.clone());
+		for i in 0..ledstrip.len() {
+			if (3*i + 2) + offset < raw_data.len() {
+				ledstrip[i] = [
+					0xFF,
+					raw_data[3*i + 0 + offset], 
+					raw_data[3*i + 1 + offset],
+					raw_data[3*i + 2 + offset],
+				]
 			}
 		}
-	}
-	
-}
-
-fn set_all_rgb( ledstrip: ws2811_t, r: u8, g: u8, b: u8) {
-	unsafe {
-		for i in 0..ledstrip.channel[0].count {
-			*ledstrip.channel[0].leds.offset(i as isize) = compose_color(r,g,b);
-		}
+		offset += ledstrip.len();
 	}
 }
 
-fn compose_color( r: u8, g: u8, b: u8) -> u32 {
-	return 0xFF000000 as u32 + (r as u32)*2_u32.pow(16) + (g as u32)*2_u32.pow(8) + b as u32;
+fn set_all_rgb( ledstrip: &mut [RawColor], r: u8, g: u8, b: u8) {
+    for i in 0..ledstrip.len() {
+        ledstrip[i] = [0xFF, r, g, b];
+    }
 }
-/*
-fn process_config_packet( packet: &[u8] ) -> Result<StartupMessage, Error> {
-
-	return Result(StartupMessage::new())
-
-}
-fn send_config_packet( socket: &UdpSocket, src_addr: SocketAddr, setup_port: u16) {
-
-}
-*/

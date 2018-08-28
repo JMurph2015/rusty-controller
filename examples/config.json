@@ -1,0 +1,43 @@
+{
+    "name": "Maseeh5",
+    "port": 8080,
+    "setup_port": 37322,
+    "dma": 10,
+    "freq": 800000,
+    "channels": [
+        {
+            "num": 0,
+            "pin": 10,
+            "count": 120,
+            "invert": false,
+            "brightness": 255,
+            "strip_type": "Ws2811Grb"
+        }
+    ],
+    "strips": [
+        {
+            "name": "Window1",
+            "startAddr": 0,
+            "endAddr": 29,
+            "channel": 0
+        },
+        {
+            "name": "Window2",
+            "startAddr": 30,
+            "endAddr": 59,
+            "channel": 0
+        },
+        {
+            "name": "Window3",
+            "startAddr": 60,
+            "endAddr": 89,
+            "channel": 0
+        },
+        {
+            "name": "Window4",
+            "startAddr": 90,
+            "endAddr": 119,
+            "channel": 0
+        }
+    ]
+}
