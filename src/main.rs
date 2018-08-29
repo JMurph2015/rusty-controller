@@ -35,7 +35,7 @@ fn main() {
     println!("Starting rusty_controller...");
 
 	let config: ControllerConfig = serde_json::from_str(
-		&fs::read_to_string("/led_config.json")
+		&fs::read_to_string("/etc/rusty_controller/config.json")
 			.expect("Failed to read config file")
 	).expect("Failed to deserialize config.");
 

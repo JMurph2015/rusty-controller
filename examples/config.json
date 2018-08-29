@@ -4,6 +4,7 @@
     "setup_port": 37322,
     "dma": 10,
     "freq": 800000,
+    "subnet": "192.168.255.0",
     "channels": [
         {
             "num": 0,

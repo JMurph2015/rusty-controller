@@ -9,6 +9,7 @@ pub struct ControllerConfig {
     pub freq: u32,
     pub channels: Vec<ChannelConfig>,
     pub strips: Vec<StripConfig>,
+    pub subnet: String,
 }
 
 impl ControllerConfig {
