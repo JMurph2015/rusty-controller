@@ -1,8 +1,12 @@
 #![allow(non_snake_case)]
+#![feature(iterator_flatten)]
 extern crate serde;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
+
+extern crate pnet;
+use pnet::datalink;
 
 extern crate mio;
 use mio::net::UdpSocket;
@@ -22,11 +26,11 @@ mod config;
 use config::{ControllerConfig, create_handler};
 
 use std::{
+	cmp::{min},
 	thread,
 	fs,
-	process::{Command},
 	time::{Duration},
-	net::{SocketAddr, Ipv4Addr}
+	net::{SocketAddr, IpAddr, Ipv4Addr}
 };
 
 pub const UDP_MAX_PACKET_SIZE: u32 = 65507 as u32;
@@ -147,12 +151,11 @@ fn setup_server_connection(
 	config: ControllerConfig
 	) {
 	// ifconfig | grep -i "inet " | sed -r 's/.*addr:([^ ]+).*/\1/' | tr '\n' ' '
-	let output = Command::new("hostname")
-		.arg("-I")
-		.output()
-		.expect("Failed to execute hostname command.");
-	let ip_string = String::from_utf8_lossy( &output.stdout ).split_whitespace().next()
-		.expect("Sad times since there were no IP's listed.").to_string();
+	
+	let ip_addr = find_matching_ip(config.subnet, config.netmask)
+		.expect("Failed to find matching subnet");
+	
+	let ip_string = format!("{}.{}.{}.{}", ip_addr[0], ip_addr[1], ip_addr[2], ip_addr[3]);
 
 	println!("IP Address: {}", ip_string);
 
@@ -239,4 +242,35 @@ fn set_all_rgb( ledstrip: &mut [RawColor], r: u8, g: u8, b: u8) {
     for i in 0..ledstrip.len() {
         ledstrip[i] = [0xFF, r, g, b];
     }
+}
+
+fn find_matching_ip(subnet: [u8; 4], netmask: [u8; 4]) -> Result<[u8; 4], String> {
+    let ifaces = datalink::interfaces();
+    let ips = ifaces.iter().map(|x: _| {
+        x.ips.iter()
+    }).flatten().map(|x: _| {
+        x.ip()
+    }).filter(|x: _| {
+        x.is_ipv4()
+    }).map(|x: _| {
+        match x {
+            IpAddr::V4(s) => s,
+            IpAddr::V6(s) => Ipv4Addr::new(0,0,0,0)
+        }
+    }).map(|x: _| {
+        x.octets()
+    }).filter(|x: _| {
+        x.iter().zip(netmask.iter()).map(|y: (_, _)| {
+            y.0.clone() & y.1.clone()
+        }).zip(subnet.iter()).map(|y: (_, _)| {
+            y.0.clone() == y.1.clone()
+        }).fold(true, |y: _, z: _| {
+            y && z
+        })
+    }).collect::<Vec<_>>();
+    if ips.len() > 0 {
+        return Ok(ips[0]);
+    } else {
+        return Err("No matching IP's found".into());
+    } 
 }

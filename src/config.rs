@@ -7,9 +7,10 @@ pub struct ControllerConfig {
     pub setup_port: u16,
     pub dma: i32,
     pub freq: u32,
+    pub subnet: [u8; 4],
+    pub netmask: [u8; 4],
     pub channels: Vec<ChannelConfig>,
     pub strips: Vec<StripConfig>,
-    pub subnet: String,
 }
 
 impl ControllerConfig {
