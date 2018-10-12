@@ -15,7 +15,6 @@ fern = { version = "0.5", features = ["colored"] }
 colored = "1.6"
 chrono = "0.4"
 
-
 [profile.release]
 opt-level = 3
 debug = true
