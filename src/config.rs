@@ -39,9 +39,7 @@ pub struct StripConfig {
 
 pub fn create_handler(config: ControllerConfig) -> rs_ws281x::Controller {
     let builder = &mut rs_ws281x::ControllerBuilder::new();
-    builder
-        .freq(config.freq)
-        .dma(config.dma);
+    builder.freq(config.freq).dma(config.dma);
     for channel_config in config.channels.iter() {
         builder.channel(
             channel_config.num,
@@ -51,7 +49,7 @@ pub fn create_handler(config: ControllerConfig) -> rs_ws281x::Controller {
                 .invert(channel_config.invert)
                 .brightness(channel_config.brightness)
                 .strip_type(channel_config.strip_type)
-                .build()
+                .build(),
         );
     }
     return builder.build().expect("Failed to build handler");

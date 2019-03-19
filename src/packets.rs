@@ -2,7 +2,7 @@
 pub struct StartupMessage {
     pub ip: String,
     pub mac: String,
-    pub msg_type: String
+    pub msg_type: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -13,7 +13,7 @@ pub struct ConfigPacket {
     pub mac: String,
     pub numStrips: i64,
     pub numAddrs: i64,
-    pub strips: Vec<StripConfigPacket>
+    pub strips: Vec<StripConfigPacket>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -21,5 +21,5 @@ pub struct StripConfigPacket {
     pub name: String,
     pub startAddr: i64,
     pub endAddr: i64,
-    pub channel: i64
+    pub channel: i64,
 }
